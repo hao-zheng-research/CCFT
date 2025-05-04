@@ -1,0 +1,5 @@
+i "insert"
+l "slide"
+p "place"
+r "rotate"
+s "screw"

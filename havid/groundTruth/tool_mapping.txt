@@ -1,0 +1,4 @@
+dh "hex screwdriver"
+dp "Phillips screwdriver"
+ws "shaft wrench"
+wn "nut wrench"
