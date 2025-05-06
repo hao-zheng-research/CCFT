@@ -72,7 +72,7 @@ def read_annotation_file(label, action_verb_mapping, object_mapping, tool_mappin
     """
     # TODO: Implement your logic to read the annotation file
     # Example (placeholder):
-    user_text = "<image>\nWhat is the assembly primitive task that the worker's left hand is performing in the video?\n" 
+    user_text = "<video>\nWhat is the assembly primitive task that the worker's left hand is performing in the video?\n" 
     user_text = user_text + """Analyze the assembly primitive task being performed by the worker's left hand in this frame through systematic observation:  
                                 \n1. Examine the spatial relationship between hand posture and tools/components  
                                 \n2. Identify assembly parts in direct contact with the hand  
@@ -86,8 +86,6 @@ def read_annotation_file(label, action_verb_mapping, object_mapping, tool_mappin
                     - Primitive tasks: ["insert the ball into the cylinder base", "insert the ball seat into the cylinder base", "insert the cylinder cap into the cylinder bracket", "insert the cylinder bracket into the cylinder base", "insert the large gear into the gear shaft", "insert the small gear into the gear shaft", "insert the bar into the hole for the bar", "insert the rod into the hole for the rod", "insert the large placer into the gear shaft", "insert the small placer into the gear shaft", "insert the screw bolt into the hole for the bolt", "insert the hex screw into the screw hole C1", "insert the hex screw into the screw hole C2", "insert the hex screw into the screw hole C3", "insert the hex screw into the screw hole C4", "insert the hex screw into the cyliner bracket", "insert the Phillips screw into the worm gear", "insert the usb male into the usb female", "insert the cylinder base into the ball seat", "insert the cylinder base into the cylinder bracket", "insert the cylinder cap into the cylinder base", "insert the cylinder bracket into the cylinder cap", "insert the gear shaft into the large gear", "insert the Phillips screw into the hole for the worm gear", "insert the Phillips screw into the hole for the Phillips screw", "slide the cylinder bracket", "slide the linear bearing", "place the cylinder base onto the assembly box", "place the cylinder bracket onto the assembly box", "place the worm gear onto the assembly box", "place the ball onto the ball seat", "place the ball seat onto the ball", "place the ball seat onto the assembly box", "place the ball seat on to the cylinder cap", "place the assembly box onto the desk", "place the cylinder cap onto the desk", "place the cylinder bracket onto the desk", "place the cylinder bracket onto the cylinder base", "place the cyinder subassembly onto the box", "place the large placer onto the large gear", "rotate the worm gear", "rotate the hand dial", "rotate the quarter-turn handle", "rotate the hand wheel", "screw the cylinder cap onto the cylinder base", "screw the gear shaft onto the hole for large gear", "screw the gear shaft onto the hole for large gear using the shaft wrench", "screw the gear shaft onto the hole for small gear", "screw the gear shaft onto the hole for small gear using the shaft wrench", "screw the nut onto the gear shaft", "screw the nut onto the gear shaft using the nut wrench", "screw the nut onto the stud on the assembly box", "screw the nut onto the stud on the assembly box using the nut wrench", "screw the nut onto the screw bolt", "screw the nut onto the screw bolt using the nut wrench", "screw the screw bolt onto the nut", "screw the hex screw into the screw hole C1", "screw the hex screw into the screw hole C1 using the hex screwdriver", "screw the hex screw into the screw hole C1 uing a Phillips screwdriver", "screw the hex screw into the screw hole C2", "screw the hex screw into the screw hole C2 using the hex screwdriver", "screw the hex screw into the screw hole C2 using the Phillips screwdriver", "screw the hex screw into the screw hole C3", "screw the hex screw into the screw hole C3 using the hex screwdriver", "screw the hex screw into the screw hole C3 using the Phillips screwdriver", "screw the hex screw into the screw hole C4", "screw the hex screw into the screw hole C4 using the hex screwdriver", "screw the hex screw into the screw hole C4 using the Phillips screwdriver", "screw the Phillips screw into the hole for worm gear", "screw the Phillips screw into the hole for worm gear using the Phillips screwdriver", "screw the Phillips screw into the hole for Phillips screw", "screw the Phillips screw into the hole for Phillips screw using the Phillips screwdriver", "screw the cylinder base into the cylinder cap"]\n"""
                     
     user_text = user_text + valid_classes
-    
-    assistant_text_general = ("Below is the primitive task performed by the worker's left hand: \n")
     
     action_elements = parse_label(label)
     action_verb = map_label_with_semantics(action_elements[0], action_verb_mapping)
@@ -136,17 +134,20 @@ def read_annotation_file(label, action_verb_mapping, object_mapping, tool_mappin
             CoT_tool = f"""
                         3. A \"{tool}\" can be seen in the worker's hand to perform the assembly task.\n
                         """
-        CoT_template = CoT_head + CoT_main + CoT_tool
-    
+        CoT_template = "chain_of_thought: " + CoT_head + CoT_main + CoT_tool
+        
+        
+    assistant_text_general = ("Below is the primitive task performed by the worker's left hand: \n")
     if label == "null":
         description = f"Below is the primitive task performed by the worker's left hand:\n- Action verb: \"{action_verb}\"\n- Manipulated object: \"{manipulated_object}\"\n- Target object: \"{target_object}\"\n- Tool: \"{tool}\"\n\nConclusion: The left hand of the worker did nothing related to the assembly task. \n "
     else:
         description = f"Below is the primitive task performed by the worker's left hand:\n- Action verb: \"{action_verb}\"\n- Manipulated object: \"{manipulated_object}\"\n- Target object: \"{target_object}\"\n- Tool: \"{tool}\"\n\nConclusion: The left hand of the worker \"{semantics}\". \n"
         #description =  f"The left hand of the worker performed the action verb is {action_verb}; manipulated object is {manipulated_object}; target object is {target_object}; using the tool {tool}. \n"
     
-    assistant_text = assistant_text_general + description
-
-    return user_text, assistant_text, CoT_template
+    assistant_text = "\nfinal_answer: \n" + assistant_text_general + description
+    
+    assistant_text = CoT_template + assistant_text
+    return user_text, assistant_text
 
 def parse_splitted_filename(filename):
     """
@@ -204,7 +205,7 @@ def gather_split_video_annotations(split_videos_folder, action_verb_mapping, obj
                 # Create the JSON structure for this file
                 
                 # Read or parse your annotation file
-                user_text, assistant_text, CoT_template = read_annotation_file(label, action_verb_mapping, object_mapping, tool_mapping, label_mapping)
+                user_text, assistant_text = read_annotation_file(label, action_verb_mapping, object_mapping, tool_mapping, label_mapping)
                 
             # The "videos" field can be derived from the annotation filename
             # or however your naming convention is set
@@ -215,17 +216,14 @@ def gather_split_video_annotations(split_videos_folder, action_verb_mapping, obj
                             "role": "user"
                         },
                         {
-                            "content": {
-                                "chain_of_thought": CoT_template,
-                                "final_answer": assistant_text
-                                },
+                            "content": assistant_text,
                             "role": "assistant"
                         }
                     ],
                     "videos": [
                         # For example: "mllm_demo_data/filename_without_extension.mp4"
                         # Adjust to match your actual naming scheme or folder path
-                        "../split_videos/" + os.path.splitext(filename)[0] + ".mp4"
+                        "CCFT_split_videos_no_w/lh_v0/" + os.path.splitext(filename)[0] + ".mp4"
                     ]
                 }
             
@@ -251,7 +249,7 @@ def main():
     json_data = gather_split_video_annotations(split_videos_folder, action_verb_mapping, object_mapping, tool_mapping, label_mapping)
 
     # 3. Write them to a JSON file
-    output_json = "./json_split_videos/split_videos_annotations_CoT.json"
+    output_json = "./json_split_videos/CCFT_lh_videos_CoT.json"
     with open(output_json, "w", encoding="utf-8") as f:
         json.dump(json_data, f, indent=2)
 
